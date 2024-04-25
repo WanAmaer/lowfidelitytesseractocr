@@ -280,6 +280,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.1+1"
+  image_processing_contouring:
+    dependency: "direct main"
+    description:
+      name: image_processing_contouring
+      sha256: e33578a9b59c986f08c650b55a5c0dd5c2610d1ae8d2e889373e9ddc999f935c
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   js:
     dependency: transitive
     description:

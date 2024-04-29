@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
 import 'package:image/image.dart' as img;
-import 'package:image_processing_contouring/Classes/Contour.dart';
-import 'package:image_processing_contouring/Image/ImageContouring.dart';
 
 class UploadPage extends StatefulWidget {
   const UploadPage({super.key});
@@ -24,23 +22,22 @@ class _UploadPageState extends State<UploadPage> {
     try {
       img.Image? image = img.decodeImage(await imageFile.readAsBytes());
 
-      // Resize the image
-      image = img.copyResize(image!, width: 800);
+      int Dwidth = (image!.width * 1.5).toInt();
+      int Dheight = (image!.height * 1.5).toInt();
+
+      var resizedImage = img.copyResize(image, width: Dwidth, height: Dheight);
 
       // Gassian Blur
-      var gassianBlur = img.gaussianBlur(image, radius: 0);
+      var gassianBlur = img.gaussianBlur(resizedImage, radius: 5);
 
       //sobel edge detecting
       var edgeDetected = img.sobel(gassianBlur);
 
-      // Apply contour detection
-      List<Contour> contours = edgeDetected.detectContours();
-
-      // Draw contours on the image
-      img.Image? imageWithContours = drawContours(image, contours);
+      // Apply Laplacian filter
+      image = sharpenImage(edgeDetected);
 
       final processedImageFile = File('${imageFile.path}_processed.jpg');
-      await processedImageFile.writeAsBytes(img.encodeJpg(imageWithContours));
+      await processedImageFile.writeAsBytes(img.encodeJpg(image));
 
       return processedImageFile;
     } catch (e) {
@@ -49,13 +46,34 @@ class _UploadPageState extends State<UploadPage> {
     }
   }
 
+  img.Image sharpenImage(img.Image image) {
+    // Create a sharpening kernel (e.g., Laplacian filter)
+    final List<num> kernel = [
+      0,
+      -1,
+      0,
+      -1,
+      5,
+      -1,
+      0,
+      -1,
+      0,
+    ];
+
+    // Apply the kernel as a convolution filter
+    final sharpened = img.convolution(image, filter: kernel);
+
+    return sharpened;
+  }
+
   _imgFromGallery() async {
     try {
       final image = await picker.pickImage(source: ImageSource.gallery);
       EasyLoading.show(status: 'loading...');
       if (image != null) {
         final processedImageFile = await processImage(File(image.path));
-        extracted = await FlutterTesseractOcr.extractText(processedImageFile!.path);
+        extracted =
+            await FlutterTesseractOcr.extractText(processedImageFile!.path);
       } else {
         extracted = "Recognised extracted text will be shown here";
       }
@@ -105,20 +123,6 @@ class _UploadPageState extends State<UploadPage> {
         textAlign: TextAlign.center,
       );
     }
-  }
-
-  img.Image drawContours(img.Image image, List<Contour> contours) {
-    // Draw contours on a copy of the image
-    img.Image imageCopy = img.copyResize(image, width: image.width, height: image.height);
-
-    // Draw contours on the image copy
-    for (var contour in contours) {
-      for (var point in contour.Points) {
-        imageCopy.setPixel(point.x.toInt(), point.y.toInt(), img.ColorInt16.rgb(255, 0, 0)); // Draw contour in red
-      }
-    }
-
-    return imageCopy;
   }
 
   @override

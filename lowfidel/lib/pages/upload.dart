@@ -18,6 +18,7 @@ class _UploadPageState extends State<UploadPage> {
   dynamic _pickerror;
   String? extracted = 'Recognised Extracted Text Will Appear Here';
   final picker = ImagePicker();
+  File? processedImageFile;
   Future<File?> processImage(File imageFile) async {
     try {
       img.Image? image = img.decodeImage(await imageFile.readAsBytes());
@@ -71,7 +72,7 @@ class _UploadPageState extends State<UploadPage> {
       final image = await picker.pickImage(source: ImageSource.gallery);
       EasyLoading.show(status: 'loading...');
       if (image != null) {
-        final processedImageFile = await processImage(File(image.path));
+        processedImageFile = await processImage(File(image.path));
         extracted =
             await FlutterTesseractOcr.extractText(processedImageFile!.path);
       } else {
@@ -108,6 +109,37 @@ class _UploadPageState extends State<UploadPage> {
             label: 'image_picked_image',
             child: Image.file(File(
               _imageFile!.path,
+            )));
+      }
+    } else if (_pickerror != null) {
+      EasyLoading.dismiss();
+      return const Text(
+        'Error: Select An Image (.PNG,.JPG,.JPEG,..) \nand Wait a Few Seconds',
+        textAlign: TextAlign.center,
+      );
+    } else {
+      EasyLoading.dismiss();
+      return const Text(
+        'You have not yet picked an image\nUpload an Image And Wait A few Seconds',
+        textAlign: TextAlign.center,
+      );
+    }
+  }
+
+  Widget afterpreview() {
+    if (processedImageFile != null) {
+      if (kIsWeb) {
+        EasyLoading.dismiss();
+        return Image.network(
+          processedImageFile!.path,
+          fit: BoxFit.cover,
+        );
+      } else {
+        EasyLoading.dismiss();
+        return Semantics(
+            label: 'image_picked_image',
+            child: Image.file(File(
+              processedImageFile!.path,
             )));
       }
     } else if (_pickerror != null) {
@@ -164,7 +196,14 @@ class _UploadPageState extends State<UploadPage> {
                       decoration: BoxDecoration(color: Colors.grey.shade100),
                       height: 250,
                       width: 650,
-                      child: Center(child: preview()),
+                      child: Center(
+                        child: Row(
+                          children: [
+                            Flexible(child: preview()),
+                            Flexible(child: afterpreview()),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(
                       height: 8,

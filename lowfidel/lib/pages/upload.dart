@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
 import 'package:image/image.dart' as img;
+import 'package:image/src/util/math_util.dart';
 
 class UploadPage extends StatefulWidget {
   const UploadPage({super.key});
@@ -28,14 +29,27 @@ class _UploadPageState extends State<UploadPage> {
 
       var resizedImage = img.copyResize(image, width: Dwidth, height: Dheight);
 
+      //Greyscale
+      var greyscaleImage = img.grayscale(resizedImage);
+
+      print('After Greyscale Image width: ${greyscaleImage.width},After height: ${greyscaleImage.height}');
+
+      //threshold
+      var thresholdedImage = threshold(greyscaleImage);
+
       // Gassian Blur
-      var gassianBlur = img.gaussianBlur(resizedImage, radius: 5);
+      // var gassianBlur = img.gaussianBlur(resizedImage, radius: 5);
 
       //sobel edge detecting
-      var edgeDetected = img.sobel(gassianBlur);
+      // var edgeDetected = img.sobel(gassianBlur);
+
+      //Add Contrast
+      //var enhancedImage = img.contrast(thresholdedImage, contrast: 2.0);
+
+      //print('After Contrast Image width: ${enhancedImage.width},After height: ${enhancedImage.height}');
 
       // Apply Laplacian filter
-      image = sharpenImage(edgeDetected);
+      image = sharpenImage(thresholdedImage);
 
       final processedImageFile = File('${imageFile.path}_processed.jpg');
       await processedImageFile.writeAsBytes(img.encodeJpg(image));
@@ -45,6 +59,28 @@ class _UploadPageState extends State<UploadPage> {
       print('Error processing image: $e');
       return null;
     }
+  }
+
+  img.Image threshold(img.Image image) {
+    num threshold = 0.5;
+    //Image? mask;
+    for (final frame in image.frames) {
+      for (final p in frame) {
+         final y =
+             0.3 * p.rNormalized + 0.59 * p.gNormalized + 0.11 * p.bNormalized;
+        // final y =
+        //     0.2126 * p.rNormalized + 0.7152 * p.gNormalized + 0.0722 * p.bNormalized;
+
+        final y2 = y < threshold ? 0 : p.maxChannelValue;
+        //final msk = mask?.getPixel(p.x, p.y).getChannelNormalized(maskChannel);
+        //final mx = (msk ?? 1) * 1;
+        p
+          ..r = mix(p.r, y2, 1)
+          ..g = mix(p.g, y2, 1)
+          ..b = mix(p.b, y2, 1);
+      }
+    }
+    return image;
   }
 
   img.Image sharpenImage(img.Image image) {

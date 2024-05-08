@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
 import 'package:image/image.dart' as img;
 import 'package:image/src/util/math_util.dart';
+import 'package:google_vision/google_vision.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class UploadPage extends StatefulWidget {
   const UploadPage({super.key});
@@ -105,12 +107,22 @@ class _UploadPageState extends State<UploadPage> {
 
   _imgFromGallery() async {
     try {
+      final String jsonString = await rootBundle.loadString('assets/auth/auth.json');
+      final googleVision = await GoogleVision.withJwt(jsonString);
       final image = await picker.pickImage(source: ImageSource.gallery);
       EasyLoading.show(status: 'loading...');
       if (image != null) {
-        processedImageFile = await processImage(File(image.path));
-        extracted =
-            await FlutterTesseractOcr.extractText(processedImageFile!.path);
+        // processedImageFile = await processImage(File(image.path));
+        List<EntityAnnotation> annotations = await googleVision.textDetection(
+          JsonImage.fromFilePath(image!.path));
+        extracted = annotations.map((annotation) => annotation.description).join('\n');
+
+      //   extracted = await FlutterTesseractOcr.extractText(processedImageFile!.path, args: {
+      //     "tessedit_char_whitelist": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:. ",
+      //     "preserve_interword_spaces": "1",
+      //     "tessedit_pageseg_mode": "6",
+      //     "tessedit_doctext_only" : "1",
+      // });
       } else {
         extracted = "Recognised extracted text will be shown here";
       }
@@ -162,36 +174,36 @@ class _UploadPageState extends State<UploadPage> {
     }
   }
 
-  Widget afterpreview() {
-    if (processedImageFile != null) {
-      if (kIsWeb) {
-        EasyLoading.dismiss();
-        return Image.network(
-          processedImageFile!.path,
-          fit: BoxFit.cover,
-        );
-      } else {
-        EasyLoading.dismiss();
-        return Semantics(
-            label: 'image_picked_image',
-            child: Image.file(File(
-              processedImageFile!.path,
-            )));
-      }
-    } else if (_pickerror != null) {
-      EasyLoading.dismiss();
-      return const Text(
-        'Error: Select An Image (.PNG,.JPG,.JPEG,..) \nand Wait a Few Seconds',
-        textAlign: TextAlign.center,
-      );
-    } else {
-      EasyLoading.dismiss();
-      return const Text(
-        'You have not yet picked an image\nUpload an Image And Wait A few Seconds',
-        textAlign: TextAlign.center,
-      );
-    }
-  }
+  // Widget afterpreview() {
+  //   if (processedImageFile != null) {
+  //     if (kIsWeb) {
+  //       EasyLoading.dismiss();
+  //       return Image.network(
+  //         processedImageFile!.path,
+  //         fit: BoxFit.cover,
+  //       );
+  //     } else {
+  //       EasyLoading.dismiss();
+  //       return Semantics(
+  //           label: 'image_picked_image',
+  //           child: Image.file(File(
+  //             processedImageFile!.path,
+  //           )));
+  //     }
+  //   } else if (_pickerror != null) {
+  //     EasyLoading.dismiss();
+  //     return const Text(
+  //       'Error: Select An Image (.PNG,.JPG,.JPEG,..) \nand Wait a Few Seconds',
+  //       textAlign: TextAlign.center,
+  //     );
+  //   } else {
+  //     EasyLoading.dismiss();
+  //     return const Text(
+  //       'You have not yet picked an image\nUpload an Image And Wait A few Seconds',
+  //       textAlign: TextAlign.center,
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -232,14 +244,7 @@ class _UploadPageState extends State<UploadPage> {
                       decoration: BoxDecoration(color: Colors.grey.shade100),
                       height: 250,
                       width: 650,
-                      child: Center(
-                        child: Row(
-                          children: [
-                            Flexible(child: preview()),
-                            Flexible(child: afterpreview()),
-                          ],
-                        ),
-                      ),
+                      child: Center(child: preview()),
                     ),
                     const SizedBox(
                       height: 8,

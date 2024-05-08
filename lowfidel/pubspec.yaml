@@ -41,6 +41,7 @@ dependencies:
   image: ^4.1.7
   flutter_image: ^4.1.11
   image_processing_contouring: ^0.0.1
+  google_vision: ^1.2.0+6
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +68,7 @@ flutter:
   assets:
     - assets/tessdata/
     - assets/
+    - assets/auth/auth.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
